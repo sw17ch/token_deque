@@ -1,0 +1,20 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build_and_test:
+    name: token_list
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: -- --check
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
