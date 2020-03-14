@@ -731,6 +731,101 @@ impl<T> Deque<T> {
         }
     }
 
+    /// Try to swap the elements represented by tokens `i` and
+    /// `j`. Returns `Some(())` on success and `None` if either token
+    /// has become invalid. This does not invalidate either `i` or
+    /// `j`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use token_deque::Deque;
+    ///
+    /// let mut l = Deque::new();
+    /// let a = l.push_back(10);
+    /// l.push_back(20);
+    /// let b = l.push_back(30);
+    ///
+    /// l.swap(&a, &b);
+    ///
+    /// let v: Vec<&u8> = l.iter_front().collect();
+    ///
+    /// assert_eq!(vec![&30, &20, &10], v);
+    /// assert_eq!(Some(&10), l.get(&a));
+    /// assert_eq!(Some(&30), l.get(&b));
+    /// ```
+    #[must_use]
+    pub fn swap(&mut self, i: &Token, j: &Token) -> Option<()> {
+        let Token {
+            ix: i_ix,
+            generation: i_generation,
+        } = i;
+        let Token {
+            ix: j_ix,
+            generation: j_generation,
+        } = j;
+
+        // Get the front and back for i and j.
+        let i = self
+            .slots
+            .get(*i_ix)
+            .and_then(|s| s.get_used())
+            .and_then(|v| v.as_generation(*i_generation))
+            .map(|u| (u.front(), u.back()));
+        let j = self
+            .slots
+            .get(*j_ix)
+            .and_then(|s| s.get_used())
+            .and_then(|v| v.as_generation(*j_generation))
+            .map(|u| (u.front(), u.back()));
+
+        match (i, j) {
+            (None, _) => None,
+            (_, None) => None,
+            (Some((i_front, i_back)), Some((j_front, j_back))) => {
+                // Repoint i.
+                let i = self.slots[*i_ix].get_used_mut().unwrap();
+                i.set_front(j_front);
+                i.set_back(j_back);
+
+                // Repoint i's front at j.
+                if i_front != usize::MAX {
+                    self.slots[i_front].get_used_mut().unwrap().set_back(*j_ix);
+                } else {
+                    self.front = *j_ix;
+                }
+
+                // Repoint i's back at j.
+                if i_back != usize::MAX {
+                    self.slots[i_back].get_used_mut().unwrap().set_front(*j_ix);
+                } else {
+                    self.back = *j_ix;
+                }
+
+                // Repoint j.
+                let j = self.slots[*j_ix].get_used_mut().unwrap();
+                j.set_front(i_front);
+                j.set_back(i_back);
+
+                // Repoint j's front at i.
+                if j_front != usize::MAX {
+                    self.slots[j_front].get_used_mut().unwrap().set_back(*i_ix);
+                } else {
+                    self.front = *i_ix;
+                }
+
+                // Repoint j's back at i.
+                if j_back != usize::MAX {
+                    self.slots[j_back].get_used_mut().unwrap().set_front(*i_ix);
+                } else {
+                    self.back = *i_ix;
+                }
+
+                Some(())
+            }
+        }
+    }
+
     fn remove_unchecked(&mut self, ix: usize) -> T {
         let (front, data, back) = self.free(ix).into_used().unwrap().take();
 
@@ -1099,5 +1194,67 @@ mod test {
         let t2 = l.push_front(3);
         assert_eq!(Some(()), l.move_to_back(&t2));
         assert_eq!(vec![&3, &1, &2], l.iter_back().collect::<Vec<&u8>>());
+    }
+
+    #[test]
+    fn swap_works() {
+        let mut l: Deque<u8> = Deque::new();
+
+        let t0 = l.push_back(1);
+        let t1 = l.push_back(2);
+        let t2 = l.push_back(3);
+        let t3 = l.push_back(4);
+        let t4 = l.push_back(5);
+
+        assert_eq!(Some(()), l.swap(&t1, &t3));
+
+        assert_eq!(
+            vec![&1, &4, &3, &2, &5],
+            l.iter_front().collect::<Vec<&u8>>()
+        );
+
+        assert_eq!(Some(()), l.swap(&t0, &t4));
+
+        assert_eq!(
+            vec![&5, &4, &3, &2, &1],
+            l.iter_front().collect::<Vec<&u8>>()
+        );
+
+        assert_eq!(
+            vec![&1, &2, &3, &4, &5],
+            l.iter_back().collect::<Vec<&u8>>()
+        );
+
+        // None of the tokens should have been invalidated, or point
+        // to unexpected values.
+        assert_eq!(Some(&1), l.get(&t0));
+        assert_eq!(Some(&2), l.get(&t1));
+        assert_eq!(Some(&3), l.get(&t2));
+        assert_eq!(Some(&4), l.get(&t3));
+        assert_eq!(Some(&5), l.get(&t4));
+    }
+
+    #[test]
+    fn swap_with_same_token() {
+        let mut l: Deque<u8> = Deque::new();
+
+        let t0 = l.push_back(1);
+
+        assert_eq!(Some(()), l.swap(&t0, &t0));
+
+        assert_eq!(vec![&1], l.iter_front().collect::<Vec<&u8>>());
+    }
+
+    #[test]
+    fn swap_with_removed_token() {
+        let mut l: Deque<u8> = Deque::new();
+
+        let t0 = l.push_back(1);
+        let t1 = l.push_back(2);
+
+        l.pop_front();
+
+        assert_eq!(None, l.swap(&t0, &t1));
+        assert_eq!(Some(&2), l.get(&t1));
     }
 }
