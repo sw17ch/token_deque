@@ -653,6 +653,84 @@ impl<T> Deque<T> {
         }
     }
 
+    /// Move the specified item to the back of the deque.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use token_deque::Deque;
+    ///
+    /// let mut l = Deque::new();
+    ///
+    /// l.push_back(10);
+    /// let i = l.push_back(20);
+    /// l.push_back(30);
+    ///
+    /// l.move_to_back(&i).unwrap();
+    ///
+    /// assert_eq!(vec![&10, &30, &20], l.iter_front().collect::<Vec<&u8>>());
+    /// ```
+    #[must_use]
+    pub fn move_to_back(&mut self, t: &Token) -> Option<()> {
+        let Token { ix, generation } = t;
+
+        let i = self
+            .slots
+            .get(*ix)
+            .and_then(|s| s.get_used())
+            .and_then(|v| v.as_generation(*generation))
+            .map(|u| (u.front(), u.back()));
+
+        if let Some((ix_front, ix_back)) = i {
+            if self.back == *ix {
+                // Already in the back.
+                debug_assert_eq!(usize::MAX, ix_back);
+                Some(())
+            } else {
+                // Adjust the item moving to the back.
+                let i = self.slots[*ix].get_used_mut().unwrap();
+                i.set_front(self.back);
+                i.set_back(usize::MAX);
+
+                // Adjust the moving item's front element so that it
+                // points at the moving item's back element.
+                if ix_front != usize::MAX {
+                    self.slots[ix_front]
+                        .get_used_mut()
+                        .unwrap()
+                        .set_back(ix_back);
+                } else {
+                    // Adjust the front if we're moving from the front
+                    // position. If there was only one item in the
+                    // list, this assignment would be wrong. However,
+                    // we're guaranteed to avoid that case because we
+                    // short cut everything if the moving item is
+                    // already at the back of the list.
+                    self.front = ix_back;
+                }
+
+                // Adjust the moving item's back element so that it
+                // points at the moving item's front element.
+                debug_assert_ne!(usize::MAX, ix_back);
+                self.slots[ix_back]
+                    .get_used_mut()
+                    .unwrap()
+                    .set_front(ix_front);
+
+                // Adjust the deque's current back element so that it
+                // points to the new back.
+                self.slots[self.back].get_used_mut().unwrap().set_back(*ix);
+
+                // Adjust the deque's back index.
+                self.back = *ix;
+
+                Some(())
+            }
+        } else {
+            None
+        }
+    }
+
     fn remove_unchecked(&mut self, ix: usize) -> T {
         let (front, data, back) = self.free(ix).into_used().unwrap().take();
 
@@ -1002,5 +1080,24 @@ mod test {
         let t2 = l.push_back(3);
         assert_eq!(Some(()), l.move_to_front(&t2));
         assert_eq!(vec![&3, &1, &2], l.iter_front().collect::<Vec<&u8>>());
+    }
+
+    #[test]
+    fn move_to_back() {
+        let mut l: Deque<u8> = Deque::new();
+
+        let t0 = l.push_front(1);
+        assert_eq!(Some(()), l.move_to_back(&t0));
+
+        let t1 = l.push_front(2);
+        assert_eq!(Some(()), l.move_to_back(&t1));
+        assert_eq!(vec![&2, &1], l.iter_back().collect::<Vec<&u8>>());
+
+        assert_eq!(Some(()), l.move_to_back(&t0));
+        assert_eq!(vec![&1, &2], l.iter_back().collect::<Vec<&u8>>());
+
+        let t2 = l.push_front(3);
+        assert_eq!(Some(()), l.move_to_back(&t2));
+        assert_eq!(vec![&3, &1, &2], l.iter_back().collect::<Vec<&u8>>());
     }
 }
