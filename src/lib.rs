@@ -8,11 +8,13 @@
 //! put on an internal free list. This free list is used when items
 //! are inserted into the list before the internal `Vec` is expanded.
 
+mod cursor;
 mod deque;
 mod iterators;
 mod slot;
 mod token;
 
+pub use crate::cursor::{Cursor, CursorMut};
 pub use crate::deque::Deque;
 pub use crate::iterators::{DrainBack, DrainFront, IterBack, IterFront};
 pub use crate::token::Token;

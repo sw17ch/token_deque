@@ -59,6 +59,10 @@ impl<T> Used<T> {
         (front, data, back)
     }
 
+    pub(crate) fn generation(&self) -> usize {
+        self.0.generation
+    }
+
     pub(crate) fn as_generation(&self, g: usize) -> Option<&Used<T>> {
         if self.0.generation == g {
             Some(self)

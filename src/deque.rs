@@ -1,3 +1,4 @@
+use crate::cursor::{Cursor, CursorMut};
 use crate::iterators::{DrainBack, DrainFront, IterBack, IterFront};
 use crate::slot::Slot;
 use crate::token::Token;
@@ -572,6 +573,76 @@ impl<T> Deque<T> {
         DrainBack::new(self, self.back)
     }
 
+    /// A cursor focused on the front of the deque.
+    pub fn cursor_front(&self) -> Option<Cursor<T>> {
+        if self.front == usize::MAX {
+            None
+        } else {
+            Some(Cursor::new(self, self.front))
+        }
+    }
+
+    /// A mutable cursor focused on the front of the deque.
+    pub fn cursor_front_mut(&mut self) -> Option<CursorMut<T>> {
+        if self.front == usize::MAX {
+            None
+        } else {
+            Some(CursorMut::new(self, self.front))
+        }
+    }
+
+    /// A cursor focused on the back of the deque.
+    pub fn cursor_back(&self) -> Option<Cursor<T>> {
+        if self.back == usize::MAX {
+            None
+        } else {
+            Some(Cursor::new(self, self.back))
+        }
+    }
+
+    /// A mutable cursor focused on the back of the deque.
+    pub fn cursor_back_mut(&mut self) -> Option<CursorMut<T>> {
+        if self.back == usize::MAX {
+            None
+        } else {
+            Some(CursorMut::new(self, self.front))
+        }
+    }
+
+    /// A cursor focused on the specified token.
+    pub fn cursor(&self, focus: &Token) -> Option<Cursor<T>> {
+        let Token { ix, generation } = focus;
+
+        if self
+            .slots
+            .get(*ix)
+            .and_then(|s| s.get_used())
+            .and_then(|u| u.as_generation(*generation))
+            .is_some()
+        {
+            Some(Cursor::new(self, *ix))
+        } else {
+            None
+        }
+    }
+
+    /// A mutable cursor focused on the specified token.
+    pub fn cursor_mut(&mut self, focus: &Token) -> Option<CursorMut<T>> {
+        let Token { ix, generation } = focus;
+
+        if self
+            .slots
+            .get(*ix)
+            .and_then(|s| s.get_used())
+            .and_then(|u| u.as_generation(*generation))
+            .is_some()
+        {
+            Some(CursorMut::new(self, *ix))
+        } else {
+            None
+        }
+    }
+
     fn remove_unchecked(&mut self, ix: usize) -> T {
         let (front, data, back) = self.free(ix).into_used().unwrap().take();
 
@@ -854,6 +925,14 @@ mod test {
         assert_eq!(None, l.pop_back());
 
         assert_eq!(None, l.get(&t));
+
+        assert!(l.cursor_front().is_none());
+        assert!(l.cursor_front_mut().is_none());
+        assert!(l.cursor_back().is_none());
+        assert!(l.cursor_back_mut().is_none());
+
+        assert!(l.cursor(&t).is_none());
+        assert!(l.cursor_mut(&t).is_none());
     }
 
     #[test]
