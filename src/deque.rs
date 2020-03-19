@@ -7,7 +7,6 @@ use std::usize;
 
 /// A deque that supports removing of nodes not in front or back
 /// position, but also nodes in front and back position.
-#[derive(Default)]
 pub struct Deque<T> {
     // Index of the first element on the free list. MAX when the
     // free-list is empty.
@@ -35,6 +34,20 @@ where
     }
 }
 
+impl<T> Default for Deque<T> {
+    fn default() -> Self {
+        Self {
+            free_list: usize::MAX,
+            front: usize::MAX,
+            back: usize::MAX,
+            next_generation: 0,
+            len_used: 0,
+            len_free: 0,
+            slots: Vec::new(),
+        }
+    }
+}
+
 impl<T> Deque<T> {
     /// Creates an empty `Deque`. No allocations are performed until
     /// values are added.
@@ -47,15 +60,7 @@ impl<T> Deque<T> {
     /// let deque: Deque<u32> = Deque::new();
     /// ```
     pub fn new() -> Deque<T> {
-        Deque {
-            free_list: usize::MAX,
-            front: usize::MAX,
-            back: usize::MAX,
-            next_generation: 0,
-            len_used: 0,
-            len_free: 0,
-            slots: Vec::new(),
-        }
+        Default::default()
     }
 
     /// Create a new `Deque` instance with a freelist at least
@@ -902,5 +907,16 @@ mod test {
         l.push_back(3);
 
         assert_eq!("[1, 2, 3]", format!("{:?}", l));
+    }
+
+    #[test]
+    fn default_works() {
+        let mut l: Deque<u8> = Default::default();
+
+        l.push_back(1);
+        l.push_back(2);
+        l.push_back(3);
+
+        assert_eq!(vec![1, 2, 3], l.drain_front().collect::<Vec<u8>>());
     }
 }
