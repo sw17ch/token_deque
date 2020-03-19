@@ -208,7 +208,7 @@ impl<T> Deque<T> {
         if usize::MAX != self.front {
             self.slots[self.front]
                 .get_used_mut()
-                .unwrap()
+                .expect("self.slots[self.front] should always be a used slot")
                 .set_front(new_ix);
         }
         // Repoint the front of the deque at the new front we just
@@ -249,7 +249,7 @@ impl<T> Deque<T> {
         if usize::MAX != self.back {
             self.slots[self.back]
                 .get_used_mut()
-                .unwrap()
+                .expect("self.slots[self.back] should always be a used slot")
                 .set_back(new_ix);
         }
         // Repoint the back of the deque at the new back we just
@@ -330,7 +330,12 @@ impl<T> Deque<T> {
     /// ```
     pub fn get_front(&self) -> Option<&T> {
         if usize::MAX != self.front {
-            Some(self.slots[self.front].get_used().unwrap().data())
+            Some(
+                self.slots[self.front]
+                    .get_used()
+                    .expect("self.slots[self.front] should always be a used slot")
+                    .data(),
+            )
         } else {
             None
         }
@@ -353,7 +358,12 @@ impl<T> Deque<T> {
     /// ```
     pub fn get_front_mut(&mut self) -> Option<&mut T> {
         if usize::MAX != self.front {
-            Some(self.slots[self.front].get_used_mut().unwrap().data_mut())
+            Some(
+                self.slots[self.front]
+                    .get_used_mut()
+                    .expect("self.slots[self.front] should always be a used slot")
+                    .data_mut(),
+            )
         } else {
             None
         }
@@ -374,7 +384,12 @@ impl<T> Deque<T> {
     /// ```
     pub fn get_back(&self) -> Option<&T> {
         if usize::MAX != self.back {
-            Some(self.slots[self.back].get_used().unwrap().data())
+            Some(
+                self.slots[self.back]
+                    .get_used()
+                    .expect("self.slots[self.back] should always be a used slot")
+                    .data(),
+            )
         } else {
             None
         }
@@ -397,7 +412,12 @@ impl<T> Deque<T> {
     /// ```
     pub fn get_back_mut(&mut self) -> Option<&mut T> {
         if usize::MAX != self.back {
-            Some(self.slots[self.back].get_used_mut().unwrap().data_mut())
+            Some(
+                self.slots[self.back]
+                    .get_used_mut()
+                    .expect("self.slots[self.back] should always be a used slot")
+                    .data_mut(),
+            )
         } else {
             None
         }
@@ -578,14 +598,21 @@ impl<T> Deque<T> {
     }
 
     fn remove_unchecked(&mut self, ix: usize) -> T {
-        let (front, data, back) = self.free(ix).into_used().unwrap().take();
+        let (front, data, back) = self
+            .free(ix)
+            .into_used()
+            .expect("self.slots[ix] must be used in order to remove it")
+            .take();
 
         if self.front == ix {
             debug_assert_eq!(usize::MAX, front);
             self.front = back;
         } else {
             debug_assert_ne!(usize::MAX, front);
-            self.slots[front].get_used_mut().unwrap().set_back(back);
+            self.slots[front]
+                .get_used_mut()
+                .expect("self.slots[front] should always be a used slot")
+                .set_back(back);
         }
 
         if self.back == ix {
@@ -593,7 +620,10 @@ impl<T> Deque<T> {
             self.back = front;
         } else {
             debug_assert_ne!(usize::MAX, back);
-            self.slots[back].get_used_mut().unwrap().set_front(front);
+            self.slots[back]
+                .get_used_mut()
+                .expect("self.slots[back] should always be a used slot")
+                .set_front(front);
         }
 
         data
@@ -612,7 +642,10 @@ impl<T> Deque<T> {
         // having to hunt down this rare problem in ancient code
         // bases. Instead, we give them a once-in-a-lifetime panic.
         let generation = self.next_generation;
-        self.next_generation = self.next_generation.checked_add(1).unwrap();
+        self.next_generation = self
+            .next_generation
+            .checked_add(1)
+            .expect("58 years have passed, or generations have become corrupted");
 
         self.len_used += 1;
 
@@ -623,7 +656,10 @@ impl<T> Deque<T> {
             self.slots.len() - 1
         } else {
             let ix = self.free_list;
-            self.free_list = self.slots[ix].get_free().unwrap().next();
+            self.free_list = self.slots[ix]
+                .get_free()
+                .expect("self.slots[self.free_list] is expected to be free")
+                .next();
             self.slots[ix] = s;
             self.len_free -= 1;
             ix
