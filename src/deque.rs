@@ -89,7 +89,7 @@ impl<T> Deque<T> {
     }
 
     /// Reserves capacity for at least `additional` more elements to
-    /// be inserte dinto the given `Deque`. Note: this only expands
+    /// be inserted into the given `Deque`. Note: this only expands
     /// the size of the underlying `Vec`. It does not add the reserved
     /// elements to the free list.
     ///
