@@ -21,7 +21,9 @@ impl<'l, T> Iterator for IterFront<'l, T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if usize::MAX != self.next_index {
-            let r = self.target.slots[self.next_index].get_used().unwrap();
+            let r = self.target.slots[self.next_index]
+                .get_used()
+                .expect("self.target.slots[self.next_index] is expected to be used");
             self.next_index = r.back();
             Some(r.data())
         } else {
@@ -50,7 +52,9 @@ impl<'l, T> Iterator for IterBack<'l, T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if usize::MAX != self.next_index {
-            let r = &self.target.slots[self.next_index].get_used().unwrap();
+            let r = &self.target.slots[self.next_index]
+                .get_used()
+                .expect("self.target.slots[self.next_index] is expected to be used");
             self.next_index = r.front();
             Some(r.data())
         } else {
@@ -80,7 +84,10 @@ impl<'l, T> Iterator for DrainFront<'l, T> {
     fn next(&mut self) -> Option<Self::Item> {
         if usize::MAX != self.next_index {
             let r = self.target.free(self.next_index);
-            let (_, value, back) = r.into_used().unwrap().take();
+            let (_, value, back) = r
+                .into_used()
+                .expect("self.target.slots[self.next_index] is expected to be used")
+                .take();
             self.next_index = back;
             Some(value)
         } else {
@@ -110,7 +117,10 @@ impl<'l, T> Iterator for DrainBack<'l, T> {
     fn next(&mut self) -> Option<Self::Item> {
         if usize::MAX != self.next_index {
             let r = self.target.free(self.next_index);
-            let (front, value, _) = r.into_used().unwrap().take();
+            let (front, value, _) = r
+                .into_used()
+                .expect("self.target.slots[self.next_index] is expected to be used")
+                .take();
             self.next_index = front;
             Some(value)
         } else {
