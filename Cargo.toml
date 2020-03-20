@@ -3,6 +3,12 @@ name = "token_deque"
 version = "0.1.0"
 authors = ["John VanEnk <vanenkj@gmail.com>"]
 edition = "2018"
+description = "A double-ended queue backed by a vector that allows access to interior values."
+license = "MIT"
+license-file = "LICENSE"
+documentation = "https://docs.rs/token_deque"
+homepage = "https://sw17ch.github.io/crates/token_deque/"
+repository = "https://github.com/sw17ch/token_deque/"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
