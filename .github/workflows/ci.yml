@@ -7,6 +7,7 @@ jobs:
     name: token_list
     runs-on: ubuntu-latest
     steps:
+      - run: rustup component add clippy
       - uses: actions/checkout@master
       - uses: actions-rs/cargo@v1
         with:
@@ -15,6 +16,10 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: build
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: -- -W clippy::all
       - uses: actions-rs/cargo@v1
         with:
           command: test
